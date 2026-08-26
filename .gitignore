@@ -1,0 +1,8 @@
+# Build output
+bin/
+build/
+Binaries/
+Intermediate/
+Saved/
+*.class
+.DS_Store
