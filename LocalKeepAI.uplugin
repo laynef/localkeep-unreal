@@ -2,8 +2,9 @@
 	"FileVersion": 3,
 	"Version": 1,
 	"VersionName": "1.0.0",
+	"EngineVersion": "5.8",
 	"FriendlyName": "Local Keep AI",
-	"Description": "Chat with your own AI models inside the Unreal Editor. Explain a Blueprint or C++ file, generate tests, and run tasks on the models you choose — local or cloud — through the Local Keep AI CLI.",
+	"Description": "Chat with your own AI models inside the Unreal Editor. Explain a Blueprint or C++ file, generate tests, and run tasks on the models you choose \u2014 local or cloud \u2014 through the Local Keep AI CLI.",
 	"Category": "Programming",
 	"CreatedBy": "Local Keep AI",
 	"CreatedByURL": "https://localkeep.ai",
@@ -16,7 +17,11 @@
 			"Name": "LocalKeepAIEditor",
 			"Type": "Editor",
 			"LoadingPhase": "PostEngineInit",
-			"PlatformAllowList": [ "Win64", "Mac", "Linux" ]
+			"PlatformAllowList": [
+				"Win64",
+				"Mac",
+				"Linux"
+			]
 		}
 	]
 }

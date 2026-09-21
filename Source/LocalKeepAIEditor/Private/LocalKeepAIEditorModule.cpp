@@ -1,4 +1,4 @@
-// Copyright (c) 2026 Man Of Tech LLC. MIT licensed — see LICENSE.
+// Copyright (c) 2026 Man Of Tech LLC.
 
 #include "LocalKeepAIEditorModule.h"
 

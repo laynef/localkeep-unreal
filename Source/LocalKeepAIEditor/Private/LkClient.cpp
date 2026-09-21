@@ -1,4 +1,4 @@
-// Copyright (c) 2026 Man Of Tech LLC. MIT licensed — see LICENSE.
+// Copyright (c) 2026 Man Of Tech LLC.
 
 #include "LkClient.h"
 
@@ -9,6 +9,12 @@
 #include "Misc/Paths.h"
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
+
+// A named category, so failures land in the Output Log and the packaged log
+// file. Before this the panel showed errors transiently under "Error" and
+// NOTHING was written anywhere — a support request could not be diagnosed
+// from logs, which every other integration in this suite can be.
+DEFINE_LOG_CATEGORY_STATIC(LogLocalKeepAI, Log, All);
 
 namespace
 {
@@ -124,6 +130,14 @@ FString FLkClient::RunSync(const TArray<FString>& Args, bool& bOutSuccess, FStri
 	}
 	Params.TrimEndInline();
 
+	// LK_TRUST asks the CLI for the confidence line. An ENV VAR, not
+	// --trust: an older `lk` exits 2 on an unknown option, breaking the
+	// command outright instead of omitting a line. ExecProcess offers no
+	// per-launch environment, so — like the Godot plugin's
+	// OS.set_environment — it is set on this process, which the child
+	// inherits.
+	FPlatformMisc::SetEnvironmentVar(TEXT("LK_TRUST"), TEXT("1"));
+
 	int32 ReturnCode = -1;
 	FString StdOut;
 	FString StdErr;
@@ -134,6 +148,9 @@ FString FLkClient::RunSync(const TArray<FString>& Args, bool& bOutSuccess, FStri
 	if (!bLaunched)
 	{
 		OutError = InstallHint();
+		UE_LOG(LogLocalKeepAI, Error,
+			TEXT("Could not launch the Local Keep AI CLI at '%s' — is it installed?"),
+			*Binary);
 		return FString();
 	}
 	if (ReturnCode != 0)
@@ -143,6 +160,8 @@ FString FLkClient::RunSync(const TArray<FString>& Args, bool& bOutSuccess, FStri
 		OutError = StdErr.IsEmpty()
 			? FString::Printf(TEXT("lk exited with code %d"), ReturnCode)
 			: StdErr.TrimStartAndEnd();
+		UE_LOG(LogLocalKeepAI, Warning,
+			TEXT("lk exited with code %d: %s"), ReturnCode, *OutError);
 		return StdOut;
 	}
 
@@ -155,13 +174,18 @@ void FLkClient::AskAsync(const FString& Prompt, TFunction<void(bool, FString)> O
 	AsyncTask(ENamedThreads::AnyBackgroundThreadNormalTask, [Prompt, OnDone]()
 	{
 		const FString Model = ResolveModel();
+		// `lk ask [OPTIONS] {prompt}` — the prompt is a POSITIONAL argument, not
+		// a --prompt option (which errors "No such option: --prompt"). Options
+		// first, positional prompt last, mirroring the Unity/Godot clients.
 		TArray<FString> Args;
 		Args.Add(TEXT("ask"));
-		Args.Add(TEXT("--prompt"));
-		Args.Add(Prompt);
 		Args.Add(TEXT("--model"));
 		Args.Add(Model);
 		Args.Add(TEXT("--raw"));
+		// End option parsing so a prompt that begins with '--' is treated as
+		// text, never smuggled in as a flag (e.g. "--model something-else").
+		Args.Add(TEXT("--"));
+		Args.Add(Prompt);
 
 		bool bOk = false;
 		FString Error;
@@ -182,15 +206,18 @@ void FLkClient::RunOnFileAsync(const FString& FilePath, const FString& Instructi
 	AsyncTask(ENamedThreads::AnyBackgroundThreadNormalTask, [FilePath, Instruction, OnDone]()
 	{
 		const FString Model = ResolveModel();
+		// Run an instruction against a file with `lk ask --file <path> {prompt}`:
+		// `ask` takes --file and a POSITIONAL prompt. (`lk run` has neither a
+		// --file nor the same shape, so the old `run --file --prompt` errored.)
 		TArray<FString> Args;
-		Args.Add(TEXT("run"));
+		Args.Add(TEXT("ask"));
 		Args.Add(TEXT("--file"));
 		Args.Add(FilePath);
-		Args.Add(TEXT("--prompt"));
-		Args.Add(Instruction);
 		Args.Add(TEXT("--model"));
 		Args.Add(Model);
 		Args.Add(TEXT("--raw"));
+		Args.Add(TEXT("--"));   // end option parsing before the positional instruction
+		Args.Add(Instruction);
 
 		bool bOk = false;
 		FString Error;

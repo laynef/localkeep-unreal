@@ -4,7 +4,7 @@ Ask your own AI models about your project without leaving the Unreal Editor —
 explain a C++ class, generate tests, or run a task against **1,000+ models**,
 local or cloud, with no API key needed for the local ones.
 
-Plugin: `LocalKeepAI` · Minimum engine: **Unreal Engine 5.3** · License: MIT
+Plugin: `LocalKeepAI` · Minimum engine: **Unreal Engine 5.3**
 
 [Website](https://localkeep.ai) · [Docs](https://localkeep.ai/docs/integrations/unreal)
 
